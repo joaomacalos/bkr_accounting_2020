@@ -86,12 +86,12 @@ exr_nies <- ifs_getA('ENDE_XDC_USD_RATE', list_em2, 2002) %>% select(date, iso2c
 
 Capital gains are calculated following Godley and Lavoie (2007, p. 135),
 and are defined as the price variation from t-1 to t times the stocks in
-t. Algebraically:
+t-1. Algebraically:
 
   
-![ KG = \\Delta exr \\cdot RES\_{t-1}
-](https://latex.codecogs.com/png.latex?%20KG%20%3D%20%5CDelta%20exr%20%5Ccdot%20RES_%7Bt-1%7D%20
-" KG = \\Delta exr \\cdot RES_{t-1} ")  
+![ KG\_t = \\Delta exr \\cdot RES\_{t-1}
+](https://latex.codecogs.com/png.latex?%20KG_t%20%3D%20%5CDelta%20exr%20%5Ccdot%20RES_%7Bt-1%7D%20
+" KG_t = \\Delta exr \\cdot RES_{t-1} ")  
 
 To measure the capital gains, the `res_nies` series is joined to the
 `exr_nies` series, a new column representing the variation of the
