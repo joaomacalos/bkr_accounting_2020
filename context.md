@@ -74,7 +74,6 @@ context_vars <- inner_join(gdp_br, exr_br) %>%
 ``` r
 context_vars %>%
   mutate(key = if_else(key == 'exr', 'BRL/USD Exchange rate', 'Gross domestic product (% change)')) %>%
-  mutate(date = ymd(date, truncated = 2)) %>%
   ggplot(aes(x=date, y=value, color = key)) +
   geom_line(size = 2) +
   scale_color_brewer(palette = 'Dark2') +
