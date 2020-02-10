@@ -83,10 +83,7 @@ def clean_assets(df):
 
 ``` python
 def clean_assets2(df, year, include = False):
-    if include is True:
-        t = df[0].df.loc[:, :1]
-    else:
-        t = df[0].df.loc[:, :2].drop(1, axis = 1)
+    t = df[0].df.loc[:, :2].drop(1, axis = 1)
         
     t.columns = ['vars', year]
     t = clean_assets(t)
@@ -214,12 +211,8 @@ def clean_liab(df):
 ```
 
 ``` python
-def clean_liab2(df, year, option1 = False, option2 = False, o3 = False):
-    if option1 is True:
-        t = df[0].df.loc[:, 3:4]
-    elif option2 is True:
-        t = df[0].df.loc[:, 4:5]
-    elif o3 is True:
+def clean_liab2(df, year, o3 = False):
+    if o3 is True:
         t = df[0].df.loc[:, 5:7].drop(6, axis = 1)
     else:
         t = df[0].df.loc[:, 4:6].drop(5, axis = 1)
