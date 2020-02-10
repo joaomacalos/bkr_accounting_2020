@@ -88,9 +88,9 @@ Capital gains are calculated following Godley and Lavoie (2007, p. 135),
 and are defined as the price variation from t-1 to t times the stocks in
 t. Algebraically:
 
-\[
-KG = \Delta exr \cdot RES
-\] To measure the capital gains, the `res_nies` series is joined to the
+`$$ KG = \Delta exr \cdot RES_{t-1} $$`
+
+To measure the capital gains, the `res_nies` series is joined to the
 `exr_nies` series, a new column representing the variation of the
 exchange rate (`d_exr`) is created and the capital gains are calculated
 by multiplying this series by the lag of
