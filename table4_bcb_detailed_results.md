@@ -16,7 +16,7 @@ Steps:
 
 1.  Load excel files between 2015 and 2019 and summarize semi-annual
     data from 2014 to 2019.
-2.  …
+2.  Consolidate with data between 2008 and 2013
 
 ### 2014 - 2019
 
@@ -275,10 +275,10 @@ the notes on the financial reports. The information is disclosed in the
 section “Resultado no período”, row “Derivativos cambiais”.
 
 ``` r
-knitr::include_graphics("snapshot_competence.png")
+knitr::include_graphics("table4_detailed_files/snapshot_competence.png")
 ```
 
-![](snapshot_competence.png)<!-- -->
+![](table4_detailed_files/snapshot_competence.png)<!-- -->
 
 This table is more tricky to collect because it is not always in the
 same page nor position in the page. The good news is that every year
@@ -400,13 +400,14 @@ competence_1sem
 
 The values for the second semester are consolidated for the whole year.
 Therefore, they must be joined to the values from the first semester and
-then subtracted:
+then
+subtracted:
 
 ``` r
-knitr::include_graphics("snapshot_competence2.png")
+knitr::include_graphics("table4_detailed_files/snapshot_competence2.png")
 ```
 
-![](snapshot_competence2.png)<!-- -->
+![](table4_detailed_files/snapshot_competence2.png)<!-- -->
 
 ``` python
 competence_2sem = []
@@ -454,7 +455,7 @@ Load the table with the
 positions:
 
 ``` python
-position_carrying = pd.read_table('position_carrying_costs.md', sep = '|')
+position_carrying = pd.read_table('table4_detailed_files/position_carrying_costs.md', sep = '|')
 position_carrying = position_carrying.rename(columns=lambda x: x.strip())
 ```
 
@@ -594,16 +595,25 @@ t_tb1.head()
     ## 3  4º Trimestre/2008  454076744        24.44      -2.35     22.09    100319817  2008   2       4
     ## 4  1º Trimestre/2009  458669464        -1.29      -2.18     -3.47    -15913077  2009   1       1
 
-With these date it is possible to calculate: 1. Carrying costs:
-(\(CC = Res \cdot (CostRate/100)\)) 2. Gross profits:
-(\(GP = Res \cdot (ProfitRate/100)\))
+With these date it is possible to calculate:
+
+1.  Carrying costs: (![CC = Res \\cdot
+    (CostRate/100)](https://latex.codecogs.com/png.latex?CC%20%3D%20Res%20%5Ccdot%20%28CostRate%2F100%29
+    "CC = Res \\cdot (CostRate/100)"))
+2.  Gross profits: (![GP = Res \\cdot
+    (ProfitRate/100)](https://latex.codecogs.com/png.latex?GP%20%3D%20Res%20%5Ccdot%20%28ProfitRate%2F100%29
+    "GP = Res \\cdot (ProfitRate/100)"))
 
 It is important to note that it is possible to calculate these values
 because the interest and profit rates are expressed in quarterly basis.
 Therefore, we can also calculate these rates in annualized terms with
-the following formula: \[
-AnnualRate = 100 \cdot ([(1+\frac{QuarterlyRate}{100})^4]-1)
-\]
+the following formula:   
+![
+AnnualRate = 100 \\cdot (\[(1+\\frac{QuarterlyRate}{100})^4\]-1)
+](https://latex.codecogs.com/png.latex?%0AAnnualRate%20%3D%20100%20%5Ccdot%20%28%5B%281%2B%5Cfrac%7BQuarterlyRate%7D%7B100%7D%29%5E4%5D-1%29%0A
+"
+AnnualRate = 100 \\cdot ([(1+\\frac{QuarterlyRate}{100})^4]-1)
+")  
 
 Applying these calculations:
 
