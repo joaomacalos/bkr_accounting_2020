@@ -102,17 +102,18 @@ def clean_sw(file):
 ```
 
 ``` python
-files[3][-13:-11]
+clean_sw(files[27])
 ```
 
-    ## '01'
+    ##     year month  empty1 n_sold n_buy stock_sold stock_buy prot_di exp_fx res_bcb
+    ## 59  2010   Dez     NaN    -       0      25600     25600       0      0       0
 
 Clean the files until 2011-01
 
 ``` python
 bcb_notional = []
 
-for file in files[0:27]:
+for file in files[0:28]:
     t1 = clean_sw(file)
     bcb_notional.append(t1)
     
@@ -120,17 +121,15 @@ bcb_notional = pd.concat(bcb_notional)
 ```
 
 ``` python
-bcb_notional.head()
+bcb_notional.tail()
 ```
 
-    ##     year month  empty1 n_sold  ... stock_buy  prot_di   exp_fx  res_bcb
-    ## 39  2004   Mar     NaN    -    ...     31550  64057.8 -64057.8  341.853
-    ## 51  2004   Jun     NaN   6800  ...     31550  51759.1 -51759.1   1852.1
-    ## 59  2004   Set     NaN    -    ...     31550  40520.8 -40520.8   1093.6
-    ## 47  2004   Dez     NaN  31550  ...       -    38343.3 -38343.3  1597.65
-    ## 39  2005   Mar     NaN   9647  ...     70425  6294.12 -6294.12 -368.196
-    ## 
-    ## [5 rows x 10 columns]
+    ##     year month  empty1 n_sold n_buy stock_sold stock_buy prot_di exp_fx res_bcb
+    ## 55  2009   Dez     NaN    -       0     137440    137440       0      0       0
+    ## 59  2010   Mar     NaN    -       0      95140     95140       0      0       0
+    ## 59  2010   Jun     NaN      0     0      54840     54840       0      0       0
+    ## 59  2010   Set     NaN    -       0      33240     33240       0      0       0
+    ## 59  2010   Dez     NaN    -       0      25600     25600       0      0       0
 
 ### 2011 - 2014
 
@@ -256,15 +255,15 @@ bcb_notional3 = pd.concat(bcb_notional3)
 ```
 
 ``` python
-bcb_notional3.head()
+bcb_notional3.tail()
 ```
 
     ##     year month  empty1 notional res_caixa res_competencia
-    ## 21  2014   Mar     NaN  -197618   6205.75         7233.37
-    ## 24  2014   Jun     NaN  -198483   3386.52         4019.56
-    ## 27  2014   Set     NaN  -236828  -18393.1        -17459.5
-    ## 30  2014   Dez     NaN  -284959  -17044.9        -5183.61
-    ## 22  2015   Mar     NaN  -358225  -34512.1        -35311.2
+    ## 32  2017   Dez     NaN -78332.9  -1443.18        -402.191
+    ## 24  2018   Mar     NaN   -77836  -1888.47        -1234.41
+    ## 27  2018   Jun     NaN  -258295  -7083.87        -8448.59
+    ## 31  2018   Set     NaN  -275124   12765.1         3131.47
+    ## 34  2018   Dez     NaN  -259921  -1519.91         -208.53
 
 Finally, we collect the first two quarters of 2019 with another specific
 function:
@@ -298,7 +297,15 @@ And we append the values to the `bcb_notional3` DataFrame:
 
 ``` python
 bcb_notional3 = bcb_notional3.append(clean_sw4(files[-1]))
+bcb_notional3.tail()
 ```
+
+    ##     year month  empty1 notional res_caixa res_competencia
+    ## 27  2018   Jun     NaN  -258295  -7083.87        -8448.59
+    ## 31  2018   Set     NaN  -275124   12765.1         3131.47
+    ## 34  2018   Dez     NaN  -259921  -1519.91         -208.53
+    ## 39  2019   Mar     NaN  -260406  -11963.1        -10799.4
+    ## 42  2019   Jun     NaN  -259310   9041.81          5934.7
 
 We can now consolidate the DataFrames and remove the undesired columns:
 
@@ -323,13 +330,13 @@ bcb_n
     ## 3   2004   Dez -38343.3
     ## 4   2005   Mar -6294.12
     ## ..   ...   ...      ...
-    ## 56  2018   Jun  -258295
-    ## 57  2018   Set  -275124
-    ## 58  2018   Dez  -259921
-    ## 59  2019   Mar  -260406
-    ## 60  2019   Jun  -259310
+    ## 57  2018   Jun  -258295
+    ## 58  2018   Set  -275124
+    ## 59  2018   Dez  -259921
+    ## 60  2019   Mar  -260406
+    ## 61  2019   Jun  -259310
     ## 
-    ## [61 rows x 3 columns]
+    ## [62 rows x 3 columns]
 
 We can now switch back to R to finish the
     analysis:
@@ -338,14 +345,14 @@ We can now switch back to R to finish the
 library(tidyverse)
 ```
 
-    ## ── Attaching packages ───────────────────────────────────────────────────────────────────────────────── tidyverse 1.3.0 ──
+    ## ── Attaching packages ─────────────────────────────────────── tidyverse 1.3.0 ──
 
     ## ✓ ggplot2 3.2.1     ✓ purrr   0.3.3
     ## ✓ tibble  2.1.3     ✓ dplyr   0.8.3
     ## ✓ tidyr   1.0.0     ✓ stringr 1.4.0
     ## ✓ readr   1.3.1     ✓ forcats 0.4.0
 
-    ## ── Conflicts ──────────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
+    ## ── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
     ## x dplyr::filter() masks stats::filter()
     ## x dplyr::lag()    masks stats::lag()
 
@@ -383,7 +390,7 @@ ifs_getQ <- function(id, country = list_em2, start = 2000) {
 res_br <- ifs_getQ('RAFA_USD', 'BR', 2004) %>% select(date, res = value)
 ```
 
-    ##   |                                                                              |                                                                      |   0%  |                                                                              |===============                                                       |  21%  |                                                                              |==============================================                        |  66%  |                                                                              |===================================================================== |  98%  |                                                                              |======================================================================| 100%
+    ##   |                                                                              |                                                                      |   0%  |                                                                              |===============                                                       |  21%  |                                                                              |======================================                                |  54%  |                                                                              |==============================================                        |  66%  |                                                                              |===================================================================== |  98%  |                                                                              |======================================================================| 100%
 
 We will use the exchange rate from the BCB, code 1, retrieved using the
 `BETS` package. We are going to convert the stocks by the exchange rate
@@ -468,4 +475,4 @@ fx_res1 %>%
   theme(legend.position = c(0.15, 0.82))
 ```
 
-![](res_swaps_files/figure-gfm/unnamed-chunk-31-1.png)<!-- -->
+![](figure5_res_swaps_files/figure-gfm/unnamed-chunk-31-1.png)<!-- -->
