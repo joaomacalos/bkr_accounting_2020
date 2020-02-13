@@ -967,6 +967,8 @@ final_det_prop = fn_py[['year', 'sem', 'notional', 'competence', 'reserves', 'gr
 final_table <- py$final_det_prop %>%
     unite(period, year:sem, sep = '-0')
 
+#write_tsv(final_table, 'bcb_detailed_prop_raw.tsv')
+
 library(kableExtra)
 ```
 
