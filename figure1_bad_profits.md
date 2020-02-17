@@ -18,14 +18,14 @@ library(reticulate)
 library(tidyverse)
 ```
 
-    ## ── Attaching packages ───────────────────────────────────────────────────────────────────────────────── tidyverse 1.3.0 ──
+    ## ── Attaching packages ──────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse 1.3.0 ──
 
     ## ✓ ggplot2 3.2.1     ✓ purrr   0.3.3
     ## ✓ tibble  2.1.3     ✓ dplyr   0.8.3
     ## ✓ tidyr   1.0.0     ✓ stringr 1.4.0
     ## ✓ readr   1.3.1     ✓ forcats 0.4.0
 
-    ## ── Conflicts ──────────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
+    ## ── Conflicts ─────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
     ## x dplyr::filter() masks stats::filter()
     ## x dplyr::lag()    masks stats::lag()
 
@@ -87,7 +87,7 @@ def clean_bcb_res(file, year, jun = False):
     df = df.dropna(axis = 1, how = 'all')
     df.columns = ['vars', 'c2', year, year_lag]
     df = df.dropna(subset = ['vars'])
-    df = df[df.vars.str.contains('RESULTADO NO PERÍODO|RESULTADO NO SEMESTRE|RESULTADO NO EXERCÍCIO')]
+    df = df[df.vars.str.contains('RESULTADO NO PER|RESULTADO NO SEMESTRE|RESULTADO NO EXERC')]
     df = df.loc[:,['vars', year, year_lag]]
     df = df.melt(id_vars = ['vars'], var_name = 'date', value_name = 'value')
     
@@ -475,11 +475,13 @@ bcb_results_sa <- py$bcb_res_semiannual %>%
   mutate(semester = if_else(semester == 1, '-06', '-12'),
          date = ymd(str_c(date, semester, truncated = 1))) %>%
   select(date, equalization, operational) %>%
-  inner_join(py$gdp_br1 %>% mutate(date = as_date(date))) %>%
-  mutate_at(vars(-date), list(~ 100 * ./(gdp*10^3))) %>%
-  select(-gdp)
+  inner_join(py$gdp_br1 %>% mutate(date = as_date(date)))
 
 #write_tsv(bcb_results_sa, 'fig6_equalization_operational_raw.tsv')
+
+bcb_results_sa <- bcb_results_sa %>%
+  mutate_at(vars(-date), list(~ 100 * ./(gdp*10^3))) %>%
+  select(-gdp)
 ```
 
 Plot:
@@ -557,9 +559,9 @@ tg_ipca1 %>% head(n = 8)
     ## 7 2005  Resolução 3.108         25/6/2003       4,5    2,5   2-7           5,69 
     ## 8 2006  Resolução 3.210         30/6/2004       4,5    2     2,5-6,5       3,14
 
-We can see that the targets for 2004 were changed. I used in this work
-only the revised
-targets.
+We can see that the targets for 2004 were changed. Only the revised
+targets were
+used.
 
 Clean:
 
@@ -679,15 +681,12 @@ ggplot(ipca_bcbres, aes(x = result/10^6, y = ipca_dev)) +
   geom_point(data = t2, aes(x = result/10^6, y = ipca_dev, color = 'red')) +
   ggthemes::theme_economist() +
   scale_color_manual(labels = c("Before 2016", 'After 2016'), values = c('dodgerblue4', 'tomato3')) +
-  labs(x = 'BCB Results (R$ Bn)', y = 'Deviation from IT (p.p.)',#) + ,
-       title = 'Bad profits?', subtitle = 'Relationship between the profits of the BCB and the deviations from the inflation target',
-       caption = "Author's elaboration based on data from the Brazilian Central Bank.") +
+  labs(x = 'BCB Results (R$ Bn)', y = 'Deviation from IT (p.p.)'#) + ,
+       #title = 'Bad profits?', subtitle = 'Relationship between the profits of the BCB and the deviations from the inflation target',
+       #caption = "Author's elaboration based on data from the Brazilian Central Bank."
+       ) +
   theme(legend.position = c(0.15, 0.815),
         legend.title = element_blank(),
-        #legend.spacing.y = unit(0, "mm"), 
-        #panel.border = element_rect(colour = "black", fill=NA),
-        #aspect.ratio = 1, axis.text = element_text(colour = 1, size = 12),
-        #legend.background = element_blank(),
         legend.key = element_rect(fill = 'lightblue', colour = 'black'),
         legend.box.background = element_rect(colour = "transparent", fill = 'transparent'),
         plot.caption=element_text(hjust = -0.1))
