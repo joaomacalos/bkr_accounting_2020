@@ -18,14 +18,14 @@ that are extensively
 library(tidyverse)
 ```
 
-    ## ── Attaching packages ────────────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse 1.3.0 ──
+    ## ── Attaching packages ──────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse 1.3.0 ──
 
     ## ✓ ggplot2 3.2.1     ✓ purrr   0.3.3
     ## ✓ tibble  2.1.3     ✓ dplyr   0.8.3
     ## ✓ tidyr   1.0.0     ✓ stringr 1.4.0
     ## ✓ readr   1.3.1     ✓ forcats 0.4.0
 
-    ## ── Conflicts ───────────────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
+    ## ── Conflicts ─────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
     ## x dplyr::filter() masks stats::filter()
     ## x dplyr::lag()    masks stats::lag()
 
@@ -104,7 +104,39 @@ capital_gains_nies <- inner_join(res_nies, exr_nies, by=c('iso2c', 'date')) %>%
   group_by(iso2c) %>%
   mutate(d_exr = exr - lag(exr)) %>%
   mutate(capital_gains = d_exr*lag(res))
+```
 
+Check if the data is complete:
+
+``` r
+capital_gains_nies %>%
+  drop_na %>%
+  filter(date < '2019-01-01') %>%
+  group_by(iso2c) %>%
+  count() %>%
+  arrange(n)
+```
+
+    ## # A tibble: 37 x 2
+    ## # Groups:   iso2c [37]
+    ##    iso2c     n
+    ##    <chr> <int>
+    ##  1 VE       15
+    ##  2 AE       16
+    ##  3 AR       16
+    ##  4 BD       16
+    ##  5 BG       16
+    ##  6 BR       16
+    ##  7 CL       16
+    ##  8 CN       16
+    ##  9 CO       16
+    ## 10 CZ       16
+    ## # … with 27 more rows
+
+Drop Venezuela:
+
+``` r
+capital_gains_nies <- capital_gains_nies %>% filter(iso2c != 'VE')
 #write_tsv(capital_gains_nies, 'capital_gains_nies_raw.tsv')
 ```
 
@@ -140,8 +172,9 @@ res_2018 = res_nies %>%
 ```
 
 Joining these 3 series together and calculating capital gains as a
-proportion of 2018
-reserves:
+proportion of 2018 reserves (the `inner_join` makes sure that Venezuela
+is properly
+excluded):
 
 ``` r
 kgains <- inner_join(k_gains_total, exr_2018) %>% inner_join(res_2018) %>%
@@ -189,4 +222,4 @@ bind_rows(kgains, mean_kg) %>%
   theme(legend.position = 'none')
 ```
 
-![](cap_gains_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
+![](figure3_cap_gains_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
