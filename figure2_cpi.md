@@ -18,14 +18,14 @@ are used extensively for cleaning the
 library(tidyverse)
 ```
 
-    ## ── Attaching packages ────────────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse 1.3.0 ──
+    ## ── Attaching packages ──────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse 1.3.0 ──
 
     ## ✓ ggplot2 3.2.1     ✓ purrr   0.3.3
     ## ✓ tibble  2.1.3     ✓ dplyr   0.8.3
     ## ✓ tidyr   1.0.0     ✓ stringr 1.4.0
     ## ✓ readr   1.3.1     ✓ forcats 0.4.0
 
-    ## ── Conflicts ───────────────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
+    ## ── Conflicts ─────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
     ## x dplyr::filter() masks stats::filter()
     ## x dplyr::lag()    masks stats::lag()
 
@@ -113,11 +113,11 @@ cpi_nies %>%
     ##  3 AE       13
     ##  4 IR       13
     ##  5 BD       14
-    ##  6 EG       14
-    ##  7 IN       14
-    ##  8 KW       14
-    ##  9 MA       14
-    ## 10 MY       14
+    ##  6 IN       14
+    ##  7 KW       14
+    ##  8 MA       14
+    ##  9 MY       14
+    ## 10 OM       14
     ## # … with 27 more rows
 
 Argentina is missing completely and there is not enough data about
@@ -350,4 +350,4 @@ ggplot(cpi_consolidated, aes(x=date)) +
   labs(x='', y = 'Consumer price index (2005 = 100)')
 ```
 
-![](cpi_files/figure-gfm/unnamed-chunk-22-1.png)<!-- -->
+![](figure2_cpi_files/figure-gfm/unnamed-chunk-22-1.png)<!-- -->
