@@ -1,0 +1,74 @@
+---
+title: "Exchange rate and GDP (Figure 4)"
+author: "João Pedro S. Macalós"
+date: "2/10/2020"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+In this notebook we show how we downloaded the BRL/USD exchange rate and the Brazilian GDP from the IMF and the WB and we show the code to build the Figure 4 in the paper "Does the accounting framework affect the operational capacity of the central bank? Lessons from the Brazilian experience." 
+
+Load `tidyverse` and `lubridate`:
+```{r}
+library(tidyverse)
+library(lubridate)
+```
+
+The following functions are wrappers that download and clean the the IMF and WB series:
+```{r, eval = F}
+ifs_getA <- function(id, country = list_em2, start = 2000) {
+  imfr::imf_data(database_id = "IFS", indicator = id, freq = "A", country = country, start = start) %>%
+    as_tibble() %>%
+    mutate(date = ymd(year, truncated = 2)) %>%
+    select(iso2c, date, id) %>%
+    gather(key, value, -date, -iso2c)
+}
+
+wb_getA <- function(id, country = list_em2, start = 2000, end = 2018) {
+  wbstats::wb(country = country, indicator = id, freq = 'Y', startdate = start, enddate = end) %>% 
+    as_tibble %>%
+    select(iso2c, date, value) %>%
+    mutate(date = ymd(as.numeric(date), truncated = 2)) %>%
+    arrange(date) %>% arrange(iso2c)
+}
+```
+
+# BRL/USD exchange rate and Brazilian GDP
+
+```{r, results = 'hide', eval = F}
+exr_br <- ifs_getA('ENDA_XDC_USD_RATE', 'BR', 2004) %>% select(date, exr = value)
+gdp_br <- wb_getA('NY.GDP.MKTP.KD.ZG', 'BR', start = 2004) %>% select(date, gdp = value)
+```
+
+Join the variables:
+
+```{r, message=F, eval = F}
+context_vars <- inner_join(gdp_br, exr_br) %>%
+  gather(key, value, -date)
+
+#write_tsv(context_vars, 'exr_gdp_vars_raw.tsv')
+```
+
+```{r}
+context_vars <- read_tsv('context_files/exr_gdp_vars_raw.tsv')
+```
+
+
+```{r fig.width=7, fig.height=4}
+context_vars %>%
+  mutate(key = if_else(key == 'exr', 'BRL/USD Exchange rate', 'Gross domestic product (annual % change)')) %>%
+  ggplot(aes(x=date, y=value, color = key)) +
+  geom_line(size = 2) +
+  scale_color_brewer(palette = 'Dark2') +
+  facet_wrap(~key, nrow =  2, scales = 'free') +
+  #ggthemes::theme_economist() +
+  theme_bw() +
+  theme(legend.position = 'none') +
+  labs(x = '', y = '') +
+  scale_x_date(breaks = '2 years', date_labels = '%Y')
+```
+
+

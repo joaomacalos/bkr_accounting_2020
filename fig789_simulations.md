@@ -515,14 +515,14 @@ Switch to R to plot the main
 library(tidyverse)
 ```
 
-    ## ── Attaching packages ────────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse 1.3.0 ──
+    ## ── Attaching packages ─────────────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse 1.3.0 ──
 
-    ## ✓ ggplot2 3.2.1     ✓ purrr   0.3.3
-    ## ✓ tibble  2.1.3     ✓ dplyr   0.8.3
-    ## ✓ tidyr   1.0.0     ✓ stringr 1.4.0
-    ## ✓ readr   1.3.1     ✓ forcats 0.4.0
+    ## ✓ ggplot2 3.3.0           ✓ purrr   0.3.4      
+    ## ✓ tibble  3.0.1           ✓ dplyr   0.8.99.9003
+    ## ✓ tidyr   1.1.0           ✓ stringr 1.4.0      
+    ## ✓ readr   1.3.1           ✓ forcats 0.5.0
 
-    ## ── Conflicts ───────────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
+    ## ── Conflicts ────────────────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
     ## x dplyr::filter() masks stats::filter()
     ## x dplyr::lag()    masks stats::lag()
 
@@ -595,17 +595,19 @@ rev_df1 %>%
   gather(var, value, -date) %>%
   mutate(year = year(date),
          semester = rep(c('I', 'II'), 24))  %>%
-  mutate(year = as.character(year)) %>%
-  mutate(year = substr(year, start = 3, stop = 4)) %>%
+  #mutate(year = as.character(year)) %>%
+  #mutate(year = substr(year, start = 3, stop = 4)) %>%
   ggplot(aes(x=semester, y= value/1000, fill = var)) +
   geom_bar(stat = 'identity', position = 'dodge') +
   facet_wrap(~year, ncol = 12, strip.position = 'bottom') +
-  ggthemes::theme_economist() +
+  #ggthemes::theme_economist() +
+  theme_minimal() +
   theme(panel.spacing = unit(0, 'lines'),
         strip.placement = "outside",
-        legend.position = c(0.2, 0.9),
-        legend.title = element_blank()) +
-  labs(x = '', y = 'R$ Bn') +
+        legend.position = c(0.125, 0.9),
+        legend.title = element_blank(),
+        strip.background = element_rect(size = 0.5)) +
+  labs(x = '', y = 'R$ Billion') +
   scale_fill_brewer(palette = 'Dark2', labels = c('ESCB', 'Law 13820'))
 ```
 
@@ -660,18 +662,21 @@ trans_df1 %>%
   gather(var, value, -date) %>%
   mutate(year = year(date),
          semester = rep(c('I', 'II'), 36))  %>%
-  mutate(year = as.character(year)) %>%
-  mutate(year = substr(year, start = 3, stop = 4)) %>%
+  #mutate(year = as.character(year)) %>%
+  #mutate(year = substr(year, start = 3, stop = 4)) %>%
   ggplot(aes(x=semester, y= value/1000, fill = var)) +
   geom_bar(stat = 'identity', position = 'dodge') +
   facet_wrap(~year, ncol = 12, strip.position = 'bottom') +
-  ggthemes::theme_economist() +
+  #ggthemes::theme_economist() +
+  theme_minimal() +
   theme(panel.spacing = unit(0, 'lines'),
         strip.placement = "outside",
-        legend.position = c(0.15, 0.80),
+        legend.position = c(0.15, 0.85),
         legend.title = element_blank(),
-        legend.box.background = element_rect(colour = "black", fill = '#d5e4eb')) +
-  labs(x = '', y = 'R$ Bn') +
+        strip.background = element_rect(size = 0.5)
+        #legend.box.background = element_rect(colour = "black", fill = '#d5e4eb')
+        ) +
+  labs(x = '', y = 'R$ Billion') +
   scale_fill_brewer(palette = 'Dark2', labels = c('ESCB', 'Law 11803', 'Law 13820'))
 ```
 
@@ -723,17 +728,19 @@ further_df1 %>%
   gather(var, value, -date) %>%
   mutate(year = year(date),
          semester = rep(c('I', 'II'), 24))  %>%
-  mutate(year = as.character(year)) %>%
-  mutate(year = substr(year, start = 3, stop = 4)) %>%
+  #mutate(year = as.character(year)) %>%
+  #mutate(year = substr(year, start = 3, stop = 4)) %>%
   ggplot(aes(x=semester, y= value/1000, fill = var)) +
   geom_bar(stat = 'identity', position = 'dodge') +
   facet_wrap(~year, ncol = 12, strip.position = 'bottom') +
-  ggthemes::theme_economist() +
+  #ggthemes::theme_economist() +
+  theme_minimal() +
   theme(panel.spacing = unit(0, 'lines'),
         strip.placement = "outside",
-        legend.position = c(0.15, 0.71),
-        legend.title = element_blank()) +
-  labs(x = '', y = 'R$ Bn') +
+        legend.position = c(0.15, 0.85),
+        legend.title = element_blank(),
+        strip.background = element_rect(size = 0.5)) +
+  labs(x = '', y = 'R$ Billion') +
   scale_fill_brewer(palette = 'Dark2', labels = c('Law 11803', 'Law 13820'))
 ```
 

@@ -7,8 +7,9 @@ The objective of this notebook is to show how the Figure 3 “Estimated
 capital gains, several countries, 2002-2018” of the paper “Does the
 accounting framework affect the operational capacity of the central
 bank? Lessons from the Brazilian experience” was built, step by step.
-The collection and cleaning steps are presented, but static versions of
-the data were saved for future reproducibility of the paper.
+The collection and cleaning steps are presented but not evaluated.
+Static versions of the data were saved for future reproducibility of the
+paper.
 
 The first step is to load the `tidyverse` and the `lubridate` packages
 that are extensively
@@ -18,14 +19,14 @@ that are extensively
 library(tidyverse)
 ```
 
-    ## ── Attaching packages ──────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse 1.3.0 ──
+    ## ── Attaching packages ─────────────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse 1.3.0 ──
 
-    ## ✓ ggplot2 3.2.1     ✓ purrr   0.3.3
-    ## ✓ tibble  2.1.3     ✓ dplyr   0.8.3
-    ## ✓ tidyr   1.0.0     ✓ stringr 1.4.0
-    ## ✓ readr   1.3.1     ✓ forcats 0.4.0
+    ## ✓ ggplot2 3.3.0           ✓ purrr   0.3.4      
+    ## ✓ tibble  3.0.1           ✓ dplyr   0.8.99.9003
+    ## ✓ tidyr   1.1.0           ✓ stringr 1.4.0      
+    ## ✓ readr   1.3.1           ✓ forcats 0.5.0
 
-    ## ── Conflicts ─────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
+    ## ── Conflicts ────────────────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
     ## x dplyr::filter() masks stats::filter()
     ## x dplyr::lag()    masks stats::lag()
 
@@ -73,6 +74,11 @@ list_em2 <- countrycode::countrycode(list_em_wiki, 'country.name', 'iso2c')
 #write_tsv(list_em2_backup, 'list_em2.tsv')
 ```
 
+``` r
+list_em2 <- read_tsv('list_em2.tsv') %>%
+  pull(iso2c)
+```
+
 To make the estimation of the capital gains, two series are required:
 the exchange rate (to the USD) and the stocks of international reserves.
 Their codes in the IMF-IFS database are `ENDE_XDC_USD_RATE` and
@@ -117,22 +123,6 @@ capital_gains_nies %>%
   arrange(n)
 ```
 
-    ## # A tibble: 37 x 2
-    ## # Groups:   iso2c [37]
-    ##    iso2c     n
-    ##    <chr> <int>
-    ##  1 VE       15
-    ##  2 AE       16
-    ##  3 AR       16
-    ##  4 BD       16
-    ##  5 BG       16
-    ##  6 BR       16
-    ##  7 CL       16
-    ##  8 CN       16
-    ##  9 CO       16
-    ## 10 CZ       16
-    ## # … with 27 more rows
-
 Drop Venezuela:
 
 ``` r
@@ -142,12 +132,29 @@ capital_gains_nies <- capital_gains_nies %>% filter(iso2c != 'VE')
 
 The next step is to calculate the accumulated capital gains in 2018,
 convert them to 2018 USDs and compare them to the stocks of
-international reserves in 2018.
+international reserves in
+2018.
+
+``` r
+capital_gains_nies <- read_tsv('cap_gains_files/capital_gains_nies_raw.tsv') %>%
+  group_by(iso2c)
+```
+
+    ## Parsed with column specification:
+    ## cols(
+    ##   date = col_date(format = ""),
+    ##   iso2c = col_character(),
+    ##   res = col_double(),
+    ##   exr = col_double(),
+    ##   d_exr = col_double(),
+    ##   capital_gains = col_double()
+    ## )
 
 Accumulated capital gains in 2018:
 
 ``` r
 k_gains_total <- capital_gains_nies  %>%
+  group_by(iso2c) %>%
   drop_na() %>%
   mutate(cumsum_gains = cumsum(capital_gains)) %>%
   summarize(cumsum_gains = last(cumsum_gains)) %>%
@@ -155,10 +162,12 @@ k_gains_total <- capital_gains_nies  %>%
   arrange(desc(cumsum_gains))
 ```
 
+    ## `summarise()` ungroup (override with `.groups` argument)
+
 Exchange rates in 2018:
 
 ``` r
-exr_2018 = exr_nies %>%
+exr_2018 = capital_gains_nies %>%
   filter(date == '2018-01-01') %>%
   select(iso2c, date, exr)
 ```
@@ -166,7 +175,7 @@ exr_2018 = exr_nies %>%
 Reserves in 2018:
 
 ``` r
-res_2018 = res_nies %>%
+res_2018 = capital_gains_nies %>%
   filter(date == '2018-01-01') %>%
   select(iso2c, res)
 ```
@@ -213,13 +222,14 @@ mean_kg = tribble(
 bind_rows(kgains, mean_kg) %>%
   mutate(iso2c = fct_reorder(iso2c, k_gains_usd, .desc = T)) %>%
   ggplot(aes(x=iso2c, y=100 * k_gains_usd)) +
-  geom_bar(stat = 'identity', aes(fill = sign)) +
+  geom_bar(stat = 'identity', aes(fill = sign), alpha = .95) +
   coord_flip() +
   theme(legend.position = 'none') +
   scale_fill_manual('',values = c('#66a182', 'tomato3', 'dodgerblue4')) +
   labs(y='Estimated capital gains (% of international reserves in 2018)', x = '') +
-  ggthemes::theme_economist() +
+  #ggthemes::theme_economist() +
+  theme_bw() +
   theme(legend.position = 'none')
 ```
 
-![](figure3_cap_gains_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
+![](figure3_cap_gains_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->

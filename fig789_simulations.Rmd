@@ -1,0 +1,438 @@
+---
+title: "Accounting simulations"
+author: "João Pedro S. Macalós"
+date: "2/14/2020"
+output: 
+  github_document:
+    pandoc_args: --webtex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The objective of this notebook is to demonstrate how we did the simulations of how the transfers between the Brazilian Central Bank and the Brazilian treasury would have been under different accounting regimes. These simulations are the heart of the section 6.3 of the paper "Does the accounting framework affect the operational capacity of the central bank? Lessons from the Brazilian experience".
+
+To make these simulations, some results are key:
+
+1. Realized and unrealized results of the central bank.
+3. Foreign exchange operations and operational result of the central bank.
+
+## Methodological note
+
+The realized results of the BCB on its foreign exchange operations are composed of three items:
+
+1. Financial results with FX swaps;
+2. Carrying costs of international reserves;
+3. Interest income
+
+The unrealized FX results of the BCB are composed by:
+
+1. Exchange rate retranslation of international reserves;
+2. Price variation (in dollars) of its international reserves.
+
+Before 2011, the information available on the financial reports of the BCB did not segregate the data on the income of the BCB on its international reserves; it only contained data on the profit rate and on the cost rate faced by the central bank. From 2011 onwards, the BCB started to disclose the profitability of the international reserves excluding the exchange rate variation, although the distinction between unrealized and realized results of the BCB excluding the retranslation of reserves is only made in the body of the financial reports. Therefore, these data was obtained by hand, and a table with the collected values is shared with this notebook. The reader can find these values in the section c) of the "Lei de resposabilidade fiscal" item in the financial reports of the BCB.
+
+However, these data was assumed to be zero due to the incompleteness of the series. Moreover, since the interest income is a realized result that does not affect the overall liquidity of the Brazilian economy, this assumption further simplifies the coding for the further recapitalization requirements since they would have to be excluded again otherwise. A description of this dataset is presented below.
+
+### Definitions
+
+Some definitions:
+
+According to the BCB, the gross profits from the international reserves are defined as the sum of the interest income in dollars plus the price variation of the foreign assets (in dollars) plus the retranslation of of the value of the assets from dollars to Brazilian reals:
+
+$$
+GP = i\cdot Res +\Delta p\cdot Res +\Delta E\cdot Res
+$$
+
+The left hand side can be divided between its realized and unrealized components:
+
+$$
+UR = \Delta E\cdot Res + \Delta p \cdot Res
+$$
+$$
+RR_{Int.Res.} = i \cdot Res
+$$
+
+Where UR stands for unrealized results and RRfor realized results on international reserves. By substituting on the first equation, it is possible to derive the unrealized results as:
+
+$$
+UR = GP - RR_{Int.Res.}
+$$
+Since we assume that $RR_{Int.Res.} = 0$,
+
+$$
+UR = GP
+$$
+
+This definition will be used in this notebook.
+
+To find the total realized results of the BCB, on the other hand, we aggregate the financial income or expenses with FX swaps (competence results) with the carrying costs of the international reserves, measured as the average stock of international reserves multiplied by the average cost rate:
+
+$$
+RR = Swaps + CC
+$$
+Where CC is carrying cost.
+
+# Simulations
+
+Load python libraries:
+```{python}
+import pandas as pd
+import numpy as np
+```
+
+Pandas display configuration:
+```{python}
+pd.set_option('display.max_columns', 10)
+pd.set_option('display.max_rows', 50)
+pd.set_option('display.width', 1000)
+```
+
+
+```{python}
+bcb_det = pd.read_csv('table4_detailed_files/table4_detailed_raw.csv', index_col = 0)
+bcb_profits = (bcb_det[['year', 'sem', 'reserves', 'gross_profits', 'carrying', 'net_profits',
+               'realized', 'equalization']])
+               
+bcb_profits = (bcb_profits.assign(unreal_profits = lambda x: x.gross_profits)
+                    .assign(carrying = lambda x: -1 * x.carrying)
+                    )
+```
+
+```{python}
+bcb_profits.tail()
+```
+
+
+Load interest income table and clean:
+```{python}
+bcb_intincome = pd.read_csv('fig789_simulations_files/table_exclusivecambial_2011_2019.md', sep = '|')
+bcb_ii = bcb_intincome.iloc[1:,1:4]
+bcb_ii = bcb_ii.rename(columns=lambda x: x.strip())
+bcb_ii[['year', 'quarter']] = bcb_ii.date.str.split('-', expand = True)
+bcb_ii = bcb_ii.assign(sem = lambda x: np.where(bcb_ii.quarter.str.contains('01|02'), 1, 2))
+bcb_ii = bcb_ii[['year', 'sem', 'interest', 'price']]
+bcb_ii = bcb_ii.apply(pd.to_numeric, errors = 'coerce')
+
+bcb_ii.head()
+```
+
+Summarize interest rate received:
+```{python}
+bcb_iisum = bcb_ii.assign(int_y = lambda x: 100 * (((1 + (x.interest/100)) ** 4) - 1))
+bcb_iisum.agg({'int_y':'mean'})
+```
+
+Convert to semiannual values
+```{python}
+bcb_ii2 = bcb_ii.assign(int_s = lambda x: (((1 + (x.interest/100)) ** 2) - 1))
+bcb_ii2 = bcb_ii2.groupby(['year', 'sem']).agg({'int_s':'mean'}).reset_index()
+bcb_ii2.head()
+```
+
+Join with tables and calculate the corrected realized values from 2011 onwards:
+```{python}
+bcb_iisum2 = bcb_profits.merge(bcb_ii2, how = 'left', on = ['year', 'sem'])
+bcb_iisum2 = bcb_iisum2.fillna(0)
+bcb_iisum2 = bcb_iisum2.assign(int_income = lambda x: x.int_s * x.reserves)
+                    
+```
+
+Calculate accumulated interest rate income (and accumulated carrying costs):
+```{python}
+bcb_iisum2.agg({'int_income':'sum', 'carrying':'sum'})
+```
+
+
+### Numerical simulation
+
+This numerical simulation is a proof of concept. It is intended to show that the code works:
+```{python}
+gp = [10, 10, -30, 20, 10, -50, 70, 0]
+carrying = [5, 5, 5, 5, 5, 5, 5, 5]
+d = {'gp':gp, 'carrying':carrying}
+
+gp1 = pd.DataFrame(d)
+gp1 = gp1.assign(revaluation = 0).assign(transfer = 0)
+```
+
+```{python}
+for row, v in gp1.iterrows():
+    if row>0:
+        gp1.loc[row, 'revaluation'] = gp1.shift(1).loc[row, 'gp'] + gp1.shift(1).loc[row, 'revaluation']
+        gp1.loc[row, 'transfer'] = gp1.loc[row, 'revaluation'] + gp1.shift(1).loc[row, 'transfer'] + gp1.shift(1).loc[row, 'carrying'] if \
+        gp1.loc[row, 'revaluation'] < 0 else gp1.shift(1).loc[row, 'transfer'] - gp1.shift(1).loc[row, 'carrying']
+        gp1.loc[row, 'revaluation'] = 0 if gp1.loc[row, 'revaluation'] < 0 else gp1.loc[row, 'revaluation']
+        #gp1.loc[row, 'transfer'] = gp1.shift(1).loc[row, 'transfer'] - gp1.shift(1).loc[row, 'carrying']
+```
+
+```{python}
+gp1
+```
+
+
+## ESCB
+
+Remember that in the ESCB accounting framework, the important distinction is between the realized and the unrealized results of the central bank.
+
+**Unrealized**:
+
+1. If unreal_profits > 0, add to revaluation;
+2. If unreal_profits < 0, subtract from revaluation;
+3. If revaluation < 0, add to transfer to treasury.
+
+**Realized**
+
+1. Transferred directly to the treasury.
+
+```{python}
+bcb_profits.head()
+```
+
+
+```{python}
+final_row = [{'year':'2019', 'sem':'2', 'gross_profits':0, 'carrying':0, 'net_profits':0, \
+            'realized':0, 'equalization':0, 'unreal_profits':0}]
+
+bcb_profits1 = bcb_profits.append(final_row).reset_index()
+```
+
+```{python}
+bcb_profits1.tail()
+```
+
+
+```{python}
+df = bcb_profits1.assign(revaluation = 0).assign(transfers_T = 0)
+```
+
+```{python}
+for row, v in df.iterrows():
+    if row > 0:
+        df.loc[row, 'revaluation'] = df.shift(1).loc[row, 'unreal_profits'] + df.shift(1).loc[row, 'revaluation']
+        df.loc[row, 'transfers_T'] = df.shift(1).loc[row, 'realized'] + df.loc[row, 'revaluation'] if df.loc[row, 'revaluation'] < 0 \
+        else df.shift(1).loc[row, 'realized']
+        df.loc[row, 'transfer_from_T'] = df.loc[row, 'transfers_T'] if df.loc[row, 'transfers_T'] < 0 else 0
+        df.loc[row, 'transfer_to_T'] = df.loc[row, 'transfers_T'] if df.loc[row, 'transfers_T'] > 0 else 0
+        df.loc[row, 'revaluation'] = 0 if df.loc[row, 'revaluation'] < 0 else df.loc[row, 'revaluation']
+```
+
+```{python}
+escb = df.assign(total_transfers = np.cumsum(df.transfers_T))
+escb[['year', 'sem', 'equalization', 'unreal_profits', 'revaluation', 'realized', \
+      'transfers_T', 'total_transfers', 'transfer_to_T', 'transfer_from_T']]
+```
+
+```{python}
+#escb.to_csv('sim_escb.csv')
+```
+
+## Law 13.820
+
+In this framework, what matters is the foreing exchange operations (the equalization account).
+
+1. If equalization > 0, add to revaluation;
+2. If equalization < 0, subtract from revaluation;
+3. If revaluation < 0, add to transfer to treasury.
+
+The simulations starts with the central bank holding 160000 in bonds that can be used for monetary policy. This is approximately the stocks of free bonds on the BCB accounts in the end of 2007. Check the paper for further details.
+
+```{python}
+law13 = bcb_profits1.assign(revaluation = 0).assign(transfer_from_T = 0).assign(available_bonds = 160000).assign(recap = 0)
+
+for row, v in law13.iterrows():
+    if row>0:
+        law13.loc[row, 'revaluation'] = law13.shift(1).loc[row, 'equalization'] + law13.shift(1).loc[row, 'revaluation']
+        law13.loc[row, 'transfer_from_T'] = law13.loc[row, 'revaluation'] if law13.loc[row, 'revaluation'] < 0 else 0
+        law13.loc[row, 'revaluation'] = 0 if law13.loc[row, 'revaluation'] < 0 else law13.loc[row, 'revaluation']
+        law13.loc[row, 'available_bonds'] = -1 * law13.loc[row, 'transfer_from_T'] + law13.shift(1).loc[row, 'realized'] + \
+        law13.shift(1).loc[row, 'available_bonds']
+        law13.loc[row, 'further_recap'] = -1 * law13.loc[row, 'available_bonds'] if law13.loc[row, 'available_bonds'] < 0 else 0
+        law13.loc[row, 'available_bonds'] = 0 if law13.loc[row, 'available_bonds'] < 0 else law13.loc[row, 'available_bonds']
+        
+```
+
+
+```{python}
+law132 = law13[['year', 'sem', 'equalization', 'realized', 'revaluation', 'transfer_from_T', 'available_bonds', 'further_recap']]
+law132 = law132.assign(total_recap = lambda x: np.cumsum(x.further_recap))
+law132
+```
+
+```{python}
+#law132.to_csv('sim_law13.csv')
+```
+
+
+## Law 11.803 framework
+
+This framework was quite simple:
+
+1. If equalization > 0, transfer to the treasury;
+2. If equalization < 0, covered by the treasury.
+
+```{python}
+law11 = bcb_profits1
+law11 = (law11.assign(transfer_to_T = pd.np.where(law11.shift(1).equalization > 0, law11.shift(1).equalization, 0))
+        .assign(transfer_from_T = -1 * pd.np.where(law11.shift(1).equalization < 0, law11.shift(1).equalization, 0))
+        )
+
+law11b = law11[['year', 'sem', 'equalization', 'realized', 'transfer_to_T', 'transfer_from_T']]
+```
+
+```{python}
+law11b.head()
+```
+
+
+```{python}
+law11b = law11b.assign(available_bonds = 160000).assign(further_recap = 0)
+
+for row, v in law11b.iterrows():
+    if row>0:
+        law11b.loc[row, 'available_bonds'] = law11b.shift(1).loc[row, 'available_bonds'] + \
+        law11b.shift(1).loc[row, 'transfer_from_T'] + law11b.shift(1).loc[row, 'realized']
+        law11b.loc[row, 'further_recap'] = -1 * law11b.loc[row, 'available_bonds'] if law11b.loc[row, 'available_bonds'] < 0 else 0
+        law11b.loc[row, 'available_bonds'] = 0 if law11b.loc[row, 'available_bonds'] < 0 else law11b.loc[row, 'available_bonds']
+```
+
+```{python}
+law11b
+#law11b.to_csv('sim_law11.csv')
+```
+
+## Plot the main findings
+
+Switch to R to plot the main findings:
+
+```{r}
+library(tidyverse)
+library(reticulate)
+library(lubridate)
+```
+
+
+```{r}
+escb_raw = py$escb %>% mutate_at(vars(year, sem), list(~ unlist(.))) %>% unite('date', year:sem, sep = '-0')
+law13_raw = py$law132 %>% mutate_at(vars(year, sem), list(~ unlist(.))) %>% unite('date', year:sem, sep = '-0')
+law11_raw = py$law11b %>% mutate_at(vars(year, sem), list(~ unlist(.))) %>% unite('date', year:sem, sep = '-0')
+```
+
+### Revaluation accounts (Figure 7)
+
+This figure involves only the ESCB and Law 13.820 frameworks:
+
+Merging and cleaning the data:
+```{r}
+rev_df = escb_raw %>% select(date, escb = revaluation) %>%
+  bind_cols(law13_raw %>% select(law13 = revaluation))
+
+#rev_df
+
+rev_df1 = rev_df %>%
+  mutate(date = str_replace(date, '-01', '-04-30'),
+         date = str_replace(date, '-02', '-09-30')) %>%
+  mutate(date = ymd(date))
+
+rev_df1
+```
+
+```{r fig.width=7, fig.height=4, warning=F}
+rev_df1 %>%
+  gather(var, value, -date) %>%
+  mutate(year = year(date),
+         semester = rep(c('I', 'II'), 24))  %>%
+  #mutate(year = as.character(year)) %>%
+  #mutate(year = substr(year, start = 3, stop = 4)) %>%
+  ggplot(aes(x=semester, y= value/1000, fill = var)) +
+  geom_bar(stat = 'identity', position = 'dodge') +
+  facet_wrap(~year, ncol = 12, strip.position = 'bottom') +
+  #ggthemes::theme_economist() +
+  theme_minimal() +
+  theme(panel.spacing = unit(0, 'lines'),
+        strip.placement = "outside",
+        legend.position = c(0.125, 0.9),
+        legend.title = element_blank(),
+        strip.background = element_rect(size = 0.5)) +
+  labs(x = '', y = 'R$ Billion') +
+  scale_fill_brewer(palette = 'Dark2', labels = c('ESCB', 'Law 13820'))
+```
+
+### Losses covered by the treasury (Figure 8)
+
+```{r}
+transf_df = escb_raw %>% select(date, escb = transfer_from_T) %>%
+  bind_cols(law13_raw %>% select(law13 = transfer_from_T)) %>%
+  bind_cols(law11_raw %>% select(law11 = transfer_from_T))
+
+trans_df1 = transf_df %>%
+  mutate(escb = replace_na(escb, 0)) %>%
+  mutate(date = str_replace(date, '-01', '-06-01'),
+         date = str_replace(date, '-02', '-12-01')) %>%
+  mutate(date = ymd(date)) %>%
+  #set_names('date', 'escb', 'uip', 'law11') %>%
+  mutate_at(vars(escb, law13), list(~ -1 * .))
+
+trans_df1
+```
+
+```{r fig.width=7, fig.height=4, warning=F}
+trans_df1 %>%
+  gather(var, value, -date) %>%
+  mutate(year = year(date),
+         semester = rep(c('I', 'II'), 36))  %>%
+  #mutate(year = as.character(year)) %>%
+  #mutate(year = substr(year, start = 3, stop = 4)) %>%
+  ggplot(aes(x=semester, y= value/1000, fill = var)) +
+  geom_bar(stat = 'identity', position = 'dodge') +
+  facet_wrap(~year, ncol = 12, strip.position = 'bottom') +
+  #ggthemes::theme_economist() +
+  theme_minimal() +
+  theme(panel.spacing = unit(0, 'lines'),
+        strip.placement = "outside",
+        legend.position = c(0.15, 0.85),
+        legend.title = element_blank(),
+        strip.background = element_rect(size = 0.5)
+        #legend.box.background = element_rect(colour = "black", fill = '#d5e4eb')
+        ) +
+  labs(x = '', y = 'R$ Billion') +
+  scale_fill_brewer(palette = 'Dark2', labels = c('ESCB', 'Law 11803', 'Law 13820'))
+```
+
+### Further recapitalization (Figure 9)
+
+```{r}
+further_df = law13_raw %>% select(date, law13 = further_recap) %>%
+  bind_cols(law11_raw %>% select(law11 = further_recap))
+
+further_df1 = further_df %>% 
+  mutate(date = str_replace(date, '-01', '-06-01'),
+         date = str_replace(date, '-02', '-12-01')) %>%
+  mutate(date = ymd(date)) %>%
+  mutate(law13 = replace_na(law13, 0))
+
+further_df1
+```
+
+```{r fig.width=7, fig.height=4, warning=F}
+further_df1 %>%
+  gather(var, value, -date) %>%
+  mutate(year = year(date),
+         semester = rep(c('I', 'II'), 24))  %>%
+  #mutate(year = as.character(year)) %>%
+  #mutate(year = substr(year, start = 3, stop = 4)) %>%
+  ggplot(aes(x=semester, y= value/1000, fill = var)) +
+  geom_bar(stat = 'identity', position = 'dodge') +
+  facet_wrap(~year, ncol = 12, strip.position = 'bottom') +
+  #ggthemes::theme_economist() +
+  theme_minimal() +
+  theme(panel.spacing = unit(0, 'lines'),
+        strip.placement = "outside",
+        legend.position = c(0.15, 0.85),
+        legend.title = element_blank(),
+        strip.background = element_rect(size = 0.5)) +
+  labs(x = '', y = 'R$ Billion') +
+  scale_fill_brewer(palette = 'Dark2', labels = c('Law 11803', 'Law 13820'))
+```
+

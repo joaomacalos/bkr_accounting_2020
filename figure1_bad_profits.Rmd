@@ -1,48 +1,27 @@
-Equalization and operational results of the BCB (Figures 1 and 6)
-================
-João Pedro S. Macalós
-2/12/2020
+---
+title: "Equalization and operational results of the BCB (Figures 1 and 6)"
+author: "João Pedro S. Macalós"
+date: "2/12/2020"
+output: github_document
+---
 
-The objective of this notebook is to show, step by step, how the
-equalization account and the operational results of the BCB was scrapped
-from the financial reports of the BCB. These data was used to build the
-Figure 6 of the paper “Does the accounting framework affect the
-operational capacity of the central bank? Lessons from the Brazilian
-experience”. We also show how the data on the inflation targets of the
-BCB was collected in order to build the Figure 1 of the paper.
-
-Load R packages:
-
-``` r
-library(reticulate)
-library(tidyverse)
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
 ```
 
-    ## ── Attaching packages ─────────────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse 1.3.0 ──
+The objective of this notebook is to show, step by step, how the equalization account and the operational results of the BCB was scrapped from the financial reports of the BCB. These data was used to build the Figure 6 of the paper "Does the accounting framework affect the operational capacity of the central bank? Lessons from the Brazilian experience". We also show how the data on the inflation targets of the BCB was collected in order to build the Figure 1 of the paper.
 
-    ## ✓ ggplot2 3.3.0           ✓ purrr   0.3.4      
-    ## ✓ tibble  3.0.1           ✓ dplyr   0.8.99.9003
-    ## ✓ tidyr   1.1.0           ✓ stringr 1.4.0      
-    ## ✓ readr   1.3.1           ✓ forcats 0.5.0
 
-    ## ── Conflicts ────────────────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
-    ## x dplyr::filter() masks stats::filter()
-    ## x dplyr::lag()    masks stats::lag()
-
-``` r
+Load R packages:
+```{r}
+library(reticulate)
+library(tidyverse)
 library(lubridate)
 ```
 
-    ## 
-    ## Attaching package: 'lubridate'
-
-    ## The following object is masked from 'package:base':
-    ## 
-    ##     date
 
 Load python libraries:
-
-``` python
+```{python}
 import pandas as pd
 import camelot
 import numpy as np
@@ -52,15 +31,13 @@ import glob
 ```
 
 Load pdf files:
-
-``` python
+```{python}
 files_jun = sorted(glob.glob('balance_sheets_pdf/*01.pdf'))
 files_dez = sorted(glob.glob('balance_sheets_pdf/*02.pdf'))
 ```
 
 Read pdf files:
-
-``` python
+```{python}
 tables_jun = []
 
 for file in files_jun:
@@ -74,8 +51,7 @@ for file in files_dez:
 ```
 
 Define function to clean the pdf tables:
-
-``` python
+```{python}
 def clean_bcb_res(file, year, jun = False):
     year_lag = str(int(year) - 1)
     
@@ -110,19 +86,15 @@ def clean_bcb_res(file, year, jun = False):
 ```
 
 Create list of years:
-
-``` python
+```{python}
 yrs = list(range(2005, 2020))
 yrs = list(map(lambda x: str(x), yrs))
 ```
 
-The operational results of the BCB are available on the table of page 3,
-in the row that takes the name of either “RESULTADO NO PERÍODO”,
-“RESULTADO NO SEMSTRE” or “RESULADO NO EXERCÍCIO”.
+The operational results of the BCB are available on the table of page 3, in the row that takes the name of either "RESULTADO NO PERÍODO", "RESULTADO NO SEMSTRE" or "RESULADO NO EXERCÍCIO".
 
 Get results of the BCB for the first semester of each year:
-
-``` python
+```{python}
 bcb_res_jun = []
 for table, year in zip(tables_jun, yrs):
     t = clean_bcb_res(table, year, jun = True)
@@ -130,8 +102,7 @@ for table, year in zip(tables_jun, yrs):
 ```
 
 Clean the file:
-
-``` python
+```{python}
 bcb_res_jun1 = pd.concat(bcb_res_jun)
 bcb_res_jun1 = bcb_res_jun1.drop_duplicates()
 bcb_res_jun1 = bcb_res_jun1.sort_values('date')
@@ -139,17 +110,8 @@ bcb_res_jun1 = bcb_res_jun1.groupby('date').last()
 bcb_res_jun1.head()
 ```
 
-    ##            vars     value
-    ## date                     
-    ## 2004  RESULT-01   2795700
-    ## 2005  RESULT-01 -11626465
-    ## 2006  RESULT-01 -12871727
-    ## 2007  RESULT-01 -30304910
-    ## 2008  RESULT-01   3172740
-
 Get annual results for the BCB (released in December every year):
-
-``` python
+```{python}
 bcb_res_yr = []
 for table, year in zip(tables_dez, yrs):
     t = clean_bcb_res(table, year)
@@ -157,8 +119,7 @@ for table, year in zip(tables_dez, yrs):
 ```
 
 Clean:
-
-``` python
+```{python}
 bcb_res_yr1 = pd.concat(bcb_res_yr)
 bcb_res_yr1 = bcb_res_yr1.drop_duplicates()
 bcb_res_yr1 = bcb_res_yr1.sort_values('date')
@@ -166,18 +127,8 @@ bcb_res_yr1 = bcb_res_yr1.groupby('date').last()
 bcb_res_yr1.head()
 ```
 
-    ##         vars     value
-    ## date                  
-    ## 2004  RESULT   2709689
-    ## 2005  RESULT -10494963
-    ## 2006  RESULT -13392761
-    ## 2007  RESULT -47514139
-    ## 2008  RESULT  13345393
-
-Get results for the second semester
-only:
-
-``` python
+Get results for the second semester only:
+```{python}
 bcb_res_dez = bcb_res_yr1.merge(bcb_res_jun1, on = 'date', how = 'outer')
 #bcb_res_dez
 bcb_res_dez1 = (bcb_res_dez.assign(value = lambda x: x.value_x - x.value_y)
@@ -187,17 +138,8 @@ bcb_res_dez1 = bcb_res_dez1.loc[:,['vars', 'value']]
 bcb_res_dez1.head()
 ```
 
-    ##            vars       value
-    ## date                       
-    ## 2004  RESULT-02    -86011.0
-    ## 2005  RESULT-02   1131502.0
-    ## 2006  RESULT-02   -521034.0
-    ## 2007  RESULT-02 -17209229.0
-    ## 2008  RESULT-02  10172653.0
-
 Get operational results per semester:
-
-``` python
+```{python}
 bcb_res_semester = (bcb_res_jun1
                     .append(bcb_res_dez1)
                     .reset_index()
@@ -210,32 +152,18 @@ bcb_res_semester = (bcb_res_jun1
 bcb_res_semester.head()
 ```
 
-    ##    date  semester       value
-    ## 0  2004         1   2795700.0
-    ## 1  2004         2    -86011.0
-    ## 2  2005         1 -11626465.0
-    ## 3  2005         2   1131502.0
-    ## 4  2006         1 -12871727.0
-
 ### FX Equalization
 
-With the operational results in hands, we can proceed to find the
-results of the equalization accounts. Since the table reporting the
-results of the equalization account are not always in the same page of
-the BCB’ financial report, new pdf files with the specific pages were
-created.
+With the operational results in hands, we can proceed to find the results of the equalization accounts. Since the table reporting the results of the equalization account are not always in the same page of the BCB' financial report, new pdf files with the specific pages were created.
 
-Load
-files:
-
-``` python
+Load files:
+```{python}
 eq_files_jun = sorted(glob.glob('balance_sheets_pdf/equalization_page/*1_eq.pdf'))
 eq_files_dez = sorted(glob.glob('balance_sheets_pdf/equalization_page/*2_eq.pdf'))
 ```
 
 Read pdf tables:
-
-``` python
+```{python}
 tables_eq_jun = []
 
 for f in eq_files_jun:
@@ -249,34 +177,15 @@ for f in eq_files_dez:
     tables_eq_dez.append(t)
 ```
 
-The equalization result can be obtained in the row “(+/- transferências
-…)” below **Equalização cambial** in the selected pages of the
-financial reports.
+The equalization result can be obtained in the row "(+/- transferências ...)" below **Equalização cambial** in the selected pages of the financial reports.
 
-See, for
-    instance:
-
-``` python
+See, for instance:
+```{python}
 tables_eq_jun[0][0].df.iloc[[0,1,2,3,4,5,25,26,27,28,29,30],0:2]
 ```
 
-    ##                                                     0             1
-    ## 0   NOTAS EXPLICATIVAS ÀS DEMONSTRAÇÕES FINANCEIRA...              
-    ## 1                              EM 30 DE JUNHO DE 2008              
-    ## 2   (Os valores estão expressos em milhares de Rea...              
-    ## 3                                                       1º sem 2008
-    ## 4                     Conta Única do Tesouro Nacional              
-    ## 5                                       Saldo inicial   275.843.164
-    ## 25                                        Saldo final     3.175.883
-    ## 26                                Equalização Cambial              
-    ## 27                                      Saldo inicial             -
-    ## 28                                        (+) ajustes    44.798.256
-    ## 29                               (+/-) transferências  (44.798.256)
-    ## 30                                        Saldo final             -
-
 Create cleaning function:
-
-``` python
+```{python}
 def get_t(table, period):
     t = table[0].df.loc[:, :1]
     #t.columns = ['vars', files_eq[dfn][0:7]]
@@ -306,18 +215,13 @@ def get_t(table, period):
 ```
 
 Check that it works:
-
-``` python
+```{python}
 get_t(tables_eq_jun[0], '2008-01')
 # Verify that it is the same value as was visualized above
 ```
 
-    ##            vars  year semester       value
-    ## 0  equalization  2008        1 -44798256.0
-
 Create objects to store the periods:
-
-``` python
+```{python}
 periods_jun = []
 for file in eq_files_jun:
     p = file[-14:-7]
@@ -331,20 +235,13 @@ for file in eq_files_dez:
 periods_dez[:5]
 ```
 
-    ## ['2008-02', '2009-02', '2010-02', '2011-02', '2012-02']
-
-Before collecting the equalization results, we must re-read the pdf file
-from 2011-01 (period\_jun 3) specifying the coordinates on the page of
-the pdf
-table:
-
-``` python
+Before collecting the equalization results, we must re-read the pdf file from 2011-01 (period_jun 3) specifying the coordinates on the page of the pdf table:
+```{python}
 tables_eq_jun[3] = camelot.read_pdf(eq_files_jun[3], pages = '1', flavor = 'stream', edge_tol = 500, table_regions = ['100, 500, 500, 40'])
 ```
 
 Collect equalization first semester:
-
-``` python
+```{python}
 fx_eq_jun = []
 
 for file, date in zip(tables_eq_jun, periods_jun):
@@ -355,16 +252,8 @@ fx_eq_jun = pd.concat(fx_eq_jun)
 fx_eq_jun.head()
 ```
 
-    ##            vars  year semester       value
-    ## 0  equalization  2008        1 -44798256.0
-    ## 0  equalization  2009        1 -93787316.0
-    ## 0  equalization  2010        1  -1893172.0
-    ## 0  equalization  2011        1 -46199286.0
-    ## 0  equalization  2012        1  32210001.0
-
 Collect equalization for the whole year:
-
-``` python
+```{python}
 fx_eq_yr = []
 
 for file, date in zip(tables_eq_dez, periods_dez):
@@ -375,17 +264,8 @@ fx_eq_yr = pd.concat(fx_eq_yr)#.assign(year = lambda x: x.year.astype('int64')).
 fx_eq_yr.head()
 ```
 
-    ##            vars  year semester        value
-    ## 0  equalization  2008        2  126617756.0
-    ## 0  equalization  2009        2 -147718892.0
-    ## 0  equalization  2010        2  -48529720.0
-    ## 0  equalization  2011        2   44040773.0
-    ## 0  equalization  2012        2   22309406.0
-
-Collect equalization for the second semester only. It requires some data
-merging and cleaning:
-
-``` python
+Collect equalization for the second semester only. It requires some data merging and cleaning:
+```{python}
 fx_eq_dez = (fx_eq_jun.merge(fx_eq_yr, on = 'year', how = 'left')
              .assign(value = lambda x: x.value_y - x.value_x)
             )
@@ -395,16 +275,8 @@ fx_eq_dez.columns = ['vars', 'year', 'semester', 'value']
 fx_eq_dez.head()
 ```
 
-    ##            vars  year semester        value
-    ## 0  equalization  2008        2  171416012.0
-    ## 1  equalization  2009        2  -53931576.0
-    ## 2  equalization  2010        2  -46636548.0
-    ## 3  equalization  2011        2   90240059.0
-    ## 4  equalization  2012        2   -9900595.0
-
 Consolidate the equalization results in a semi-annual basis:
-
-``` python
+```{python}
 fx_eq_semester = (fx_eq_jun.append(fx_eq_dez)
                   .sort_values(['year','semester'])
                   .iloc[:,[1,2,3]]
@@ -416,14 +288,7 @@ fx_eq_semester = (fx_eq_jun.append(fx_eq_dez)
 fx_eq_semester.tail()
 ```
 
-    ##     date  semester  equalization
-    ## 0   2017         1   -15744789.0
-    ## 9   2017         2   -30677374.0
-    ## 0   2018         1   146201403.0
-    ## 10  2018         2   -19133818.0
-    ## 0   2019         1    -7560780.0
-
-``` python
+```{python}
 bcb_res_semiannual = (bcb_res_semester
                       .iloc[:,[0,1,2]]
                       .rename(columns = {'value':'operational'})
@@ -432,18 +297,10 @@ bcb_res_semiannual = (bcb_res_semester
 bcb_res_semiannual.head()
 ```
 
-    ##     date  semester  operational  equalization
-    ## 8   2008         1    3172740.0   -44798256.0
-    ## 9   2008         2   10172653.0   171416012.0
-    ## 10  2009         1    -941601.0   -93787316.0
-    ## 11  2009         2    6550645.0   -53931576.0
-    ## 12  2010         1   10803195.0    -1893172.0
-
 ## Figure 6
 
 Download Brazilian GDP (accumulated in 12 monhts) using `sgs` library:
-
-``` python
+```{python}
 import sgs
 
 gdp_br = sgs.time_serie(4382, start = '01/01/2005', end = '31/12/2018')
@@ -461,16 +318,8 @@ gdp_br1 = gdp_br1.reset_index().rename(columns = {'index':'date'}).iloc[:,[0,1]]
 gdp_br1.head()
 ```
 
-    ##         date        gdp
-    ## 0 2005-06-01  2066440.5
-    ## 1 2005-12-01  2170584.5
-    ## 2 2006-06-01  2271564.0
-    ## 3 2006-12-01  2409449.9
-    ## 4 2007-06-01  2575280.3
-
 Join the data and clean:
-
-``` r
+```{r, message = F}
 bcb_results_sa <- py$bcb_res_semiannual %>%
   mutate(semester = if_else(semester == 1, '-06', '-12'),
          date = ymd(str_c(date, semester, truncated = 1))) %>%
@@ -485,8 +334,7 @@ bcb_results_sa <- bcb_results_sa %>%
 ```
 
 Plot:
-
-``` r
+```{r fig.width=7, fig.height=4, message = F}
 bcb_results_sa %>%
   gather(key, value, -date) %>%
   ggplot(aes(x = date, y = value, color = key)) +
@@ -499,11 +347,12 @@ bcb_results_sa %>%
   scale_color_brewer(palette = 'Dark2', labels = c('Equalization', 'Operational'))
 ```
 
-![](figure1_bad_profits_files/figure-gfm/unnamed-chunk-27-1.png)<!-- -->
+
+
 
 ## Consolidate overall result of the BCB
 
-``` python
+```{python}
 bcb_yr_result = (bcb_res_yr1.reset_index()
                  .merge(fx_eq_yr.assign(year = lambda x: x.year.astype('int64')), 
                  left_on = 'date', right_on = 'year', how = 'left')
@@ -515,21 +364,12 @@ bcb_yr_result = (bcb_res_yr1.reset_index()
 bcb_yr_result.head()
 ```
 
-    ##    date       result
-    ## 0  2004    2709689.0
-    ## 1  2005  -10494963.0
-    ## 2  2006  -13392761.0
-    ## 3  2007  -47514139.0
-    ## 4  2008  139963149.0
-
 ## Deviations from the IPCA target
 
 This part of the analysis was conducted using R.
 
-Get the IPCA targets from the BCB
-website:
-
-``` r
+Get the IPCA targets from the BCB website:
+```{r}
 url_metas = jsonlite::fromJSON('https://www.bcb.gov.br/api/servico/sitebcb/Tabela?listsite=controleinflacao&identificador=historico_metas_inflacao')
 
 targets_ipca <- url_metas$conteudo$conteudoTabela %>% 
@@ -538,8 +378,7 @@ targets_ipca <- url_metas$conteudo$conteudoTabela %>%
 ```
 
 Clean:
-
-``` r
+```{r}
 tg_ipca1 <- targets_ipca[[1]] %>% as_tibble() %>%
   set_names('Year', 'Norma', 'Date', 'Target', 'Band', 'Ranges', 'IPCA') %>%
   mutate_at(vars(Year:IPCA), list( ~ str_replace_all(., "\\u200b", ""))) %>%
@@ -548,25 +387,10 @@ tg_ipca1 <- targets_ipca[[1]] %>% as_tibble() %>%
 tg_ipca1 %>% head(n = 8)
 ```
 
-    ## # A tibble: 8 x 7
-    ##   Year  Norma                   Date            Target Band  Ranges        IPCA 
-    ##   <chr> <chr>                   <chr>           <chr>  <chr> <chr>         <chr>
-    ## 1 1999  Resolução 2.615         30/6/1999       8      2     6-10          8,94 
-    ## 2 2000  Resolução 2.615         30/6/1999       6      2     4-8           5,97 
-    ## 3 2001  Resolução 2.615         30/6/1999       4      2     2-6           7,67 
-    ## 4 2002  Resolução 2.744         28/6/2000       3,5    2     1,5-5,5       12,53
-    ## 5 2003* Resolução 2.842Resoluç… 28/6/200127/6/… 3,254  22,5  1,25-5,251,5… 9,3  
-    ## 6 2004* Resolução 2.972Resoluç… 27/6/200225/6/… 3,755… 2,52… 1,25-6,253-8  7,6  
-    ## 7 2005  Resolução 3.108         25/6/2003       4,5    2,5   2-7           5,69 
-    ## 8 2006  Resolução 3.210         30/6/2004       4,5    2     2,5-6,5       3,14
-
-We can see that the targets for 2004 were changed. Only the revised
-targets were
-used.
+We can see that the targets for 2004 were changed. Only the revised targets were used.
 
 Clean:
-
-``` r
+```{r}
 # 2004 (the targets were changed in this year. We will use the latest ones)
 tg_ipca_2003 = tg_ipca1 %>% slice(5) %>%
   slice(rep(1:n(), each = 2))
@@ -594,8 +418,7 @@ tg_ipca_20042 = tg_ipca_2004 %>%
 ```
 
 Clean:
-
-``` r
+```{r}
 tg_ipca2 = tg_ipca1 %>%
   bind_rows(tg_ipca_20032, 
             tg_ipca_20042) %>%
@@ -612,60 +435,19 @@ tg_ipca2 = tg_ipca1 %>%
 tg_ipca2
 ```
 
-    ## # A tibble: 15 x 4
-    ##     date target  ipca ipca_dev
-    ##    <dbl>  <dbl> <dbl>    <dbl>
-    ##  1  2004    5.5  7.6      2.10
-    ##  2  2005    4.5  5.69     1.19
-    ##  3  2006    4.5  3.14    -1.36
-    ##  4  2007    4.5  4.46    -0.04
-    ##  5  2008    4.5  5.9      1.4 
-    ##  6  2009    4.5  4.31    -0.19
-    ##  7  2010    4.5  5.91     1.41
-    ##  8  2011    4.5  6.5      2   
-    ##  9  2012    4.5  5.84     1.34
-    ## 10  2013    4.5  5.91     1.41
-    ## 11  2014    4.5  6.41     1.91
-    ## 12  2015    4.5 10.7      6.17
-    ## 13  2016    4.5  6.29     1.79
-    ## 14  2017    4.5  2.95    -1.55
-    ## 15  2018    4.5  3.75    -0.75
-
 Combine datasets and create a flag for years after the 2015 crisis:
-
-``` r
+```{r, message=FALSE}
 ipca_bcbres <- tg_ipca2 %>%
   left_join(py$bcb_yr_result) %>%
   mutate(after_crisis = case_when(date >= 2004 & date < 2016 ~ 0,
                                   TRUE ~ 1))
 
 ipca_bcbres
-```
-
-    ## # A tibble: 15 x 6
-    ##     date target  ipca ipca_dev     result after_crisis
-    ##    <dbl>  <dbl> <dbl>    <dbl>      <dbl>        <dbl>
-    ##  1  2004    5.5  7.6      2.10    2709689            0
-    ##  2  2005    4.5  5.69     1.19  -10494963            0
-    ##  3  2006    4.5  3.14    -1.36  -13392761            0
-    ##  4  2007    4.5  4.46    -0.04  -47514139            0
-    ##  5  2008    4.5  5.9      1.4   139963149            0
-    ##  6  2009    4.5  4.31    -0.19 -142109848            0
-    ##  7  2010    4.5  5.91     1.41  -32799750            0
-    ##  8  2011    4.5  6.5      2      67512183            0
-    ##  9  2012    4.5  5.84     1.34   47103436            0
-    ## 10  2013    4.5  5.91     1.41   63641315            0
-    ## 11  2014    4.5  6.41     1.91   44876743            0
-    ## 12  2015    4.5 10.7      6.17  234050920            0
-    ## 13  2016    4.5  6.29     1.79 -249847394            1
-    ## 14  2017    4.5  2.95    -1.55  -20440663            1
-    ## 15  2018    4.5  3.75    -0.75  172277207            1
-
-``` r
 #write_tsv(ipca_bcbres, 'ipca_bcbres_raw.tsv')
 ```
 
-``` r
+
+```{r, message=FALSE}
 t1 <- ipca_bcbres %>%
   filter(after_crisis == 0)
 
@@ -673,9 +455,10 @@ t2 <- ipca_bcbres %>%
   filter(after_crisis == 1)
 ```
 
+
 ## Figure 1
 
-``` r
+```{r fig.width=7, fig.height=4}
 ggplot(ipca_bcbres, aes(x = result/10^6, y = ipca_dev)) +
   #geom_smooth(data = t1, formula = y ~ x, method = 'lm', se = F) +
   geom_line(data = t1,
@@ -701,6 +484,3 @@ ggplot(ipca_bcbres, aes(x = result/10^6, y = ipca_dev)) +
         plot.caption=element_text(hjust = -0.1))
 ```
 
-    ## `geom_smooth()` using formula 'y ~ x'
-
-![](figure1_bad_profits_files/figure-gfm/unnamed-chunk-35-1.png)<!-- -->

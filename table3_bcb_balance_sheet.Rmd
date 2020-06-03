@@ -1,0 +1,354 @@
+---
+title: "Balance sheet of the BCB"
+author: "João Pedro S. Macalós"
+date: "2/10/2020"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The objective of this notebook is to present the steps taken to scrape the pdf balance sheets of the Brazilian Central Bank to build a table with the values of its main items between 2005 and 2018. The software of choice was Python due to the `camelot` library that is great to obtain tables from pdf files.
+
+The final table of this notebook is Table 3 from the paper "Does the accounting framework affect the operational capacity of the central bank? Lessons from the Brazilian experience" that is going to be published on the Brazilian Keynesian Review.
+
+This notebook was generated as a .Rmd file in Rstudio with the `reticulate` package.
+
+Import python libraries:
+```{python}
+import pandas as pd
+import camelot
+import numpy as np
+import matplotlib.pyplot as plt
+import os
+import glob
+```
+
+```{python}
+files = sorted(glob.glob('balance_sheets_pdf/*-02.pdf'))
+```
+
+```{python}
+tables = []
+
+for f in files:
+    t = camelot.read_pdf(f, pages = '2', flavor='stream', edge_tol = 500)
+    tables.append(t)
+```
+
+```{python}
+tables[0][0].df.head()
+```
+
+## Assets
+
+We must define some functions and patterns that are going to be useful to clean the PDF files and select the data:
+
+```{python}
+pattern = ('EXTERNO|' + 
+           'ATIVO EM MOEDAS ESTRANGEIRAS|' + 
+           'INTERNO|' + 
+           'ATIVO EM MOEDA LOCAL|' + 
+           'Empréstimos|' + 
+           'Títulos Públicos|' + 
+           'Compromisso de Revenda|' + 
+           'Outros Créditos|' + 
+           'TOTAL')
+```
+
+```{python}
+def clean_assets(df):
+    t = df[df.vars.str.contains(pattern)]
+    t = (t.
+        assign(vars = t.vars.str.replace('(Nota [0-9].*)',  '').
+            str.replace('(', '').str.replace(')', '').
+            str.replace('-', '')))
+    t = t.reset_index(drop=True)
+    return(t)
+```
+
+```{python}
+def clean_assets2(df, year, include = False):
+    t = df[0].df.loc[:, :2].drop(1, axis = 1)
+        
+    t.columns = ['vars', year]
+    t = clean_assets(t)
+    return(t)
+```
+
+```{python}
+def clean_names(df):
+    t = df.assign(vars = (
+                  pd.np.where(df.vars.str.contains("ESTRAN|EXTERNO"), "EXTERNO",
+                  pd.np.where(df.vars.str.contains("LOCAL|INTERNO"), "INTERNO",
+                  pd.np.where(df.vars.str.contains("Títulos Públicos"), "GOVT_SECS",
+                  pd.np.where(df.vars.str.contains('Empréstimos'), 'LOANS_TO_BANKS',
+                  pd.np.where(df.vars.str.contains('Outros'), 'OUTROS',
+                  pd.np.where(df.vars.str.contains('TOTAL'), 'TOTAL',
+                  pd.np.where(df.vars.str.contains('Revenda'),"REPOS", df.vars)))))))))
+    return(t)
+```
+
+Get the relevant rows for 2005:
+```{python}
+bsa_2005 = clean_assets2(tables[0], '2005')
+bsa_2005 = clean_names(bsa_2005).drop(1)
+bsa_2005
+```
+
+Create a list of the remaining years (2006 to 2018):
+```{python}
+yrs = list(range(2006, 2019))
+yrs = list(map(lambda x: str(x), yrs))
+```
+
+Join all tables together
+```{python}
+assets = bsa_2005
+
+for table, year in zip(tables[1:14], yrs):
+    step1 = clean_assets2(table, year)
+    step1 = clean_names(step1).drop(1)
+    assets = assets.merge(step1, on = 'vars', how = 'left')
+    
+assets
+```
+
+Reshape to long format:
+```{python}
+assets2 = (assets.
+          apply(lambda x: x.replace('-', np.nan)).fillna(0).
+          melt(id_vars = ['vars'], var_name = 'date', value_name = 'value').
+          pivot(index = 'date', columns = 'vars', values = 'value').
+          apply(lambda x: x.replace('\.', '', regex = True)).
+          apply(lambda x: pd.to_numeric(x, errors = 'coerce'))
+          )
+          
+assets2
+```
+
+## Liabilities
+
+To get the liabilities, the logic of the codes and functions are similar to the ones used to find the assets but adapted to the liabilities of the BCB:
+```{python}
+pattern_liab = (#'EXTERNO|' + 
+                #'PASSIVO EM MOEDAS ESTRANGEIRAS|' + 
+                'INTERNO|' + 
+                'PASSIVO EM MOEDA LOCAL|' + 
+                'Depósitos de Instituições|' + 
+                #'Notas do Banco|' + 
+                'a Ordem do Governo|à Ordem do Governo|Obrigações com o Governo|' + 
+                'Compromisso de Recompra|Compromissos de Recompra|' + 
+                'MEIO CIRCULANTE|' + 
+                'PATRIMÔNIO|' + 
+                'TOTAL')
+```
+
+```{python}
+def clean_liab(df):
+    t = df[df.vars.str.contains(pattern_liab)]
+    t = (t. 
+        assign(vars = t.vars.str.replace('(Nota [0-9].*)',  '').
+        str.replace('(', '').str.replace(')', '').
+        str.replace('-', ''))
+        )
+    t = t.reset_index(drop=True)
+    return(t)
+```
+
+
+```{python}
+def clean_liab2(df, year, o3 = False):
+    if o3 is True:
+        t = df[0].df.loc[:, 5:7].drop(6, axis = 1)
+    else:
+        t = df[0].df.loc[:, 4:6].drop(5, axis = 1)
+        
+    t.columns = ['vars', year]
+    t = clean_liab(t)
+    return(t)
+```
+
+
+```{python}
+def clean_names_liab(df):
+    t = df.assign(vars = (
+                  #pd.np.where(df.vars.str.contains("ESTRAN|EXTERNO"), "EXTERNO",
+                  pd.np.where(df.vars.str.contains("LOCAL|INTERNO"), "INTERNO",
+                  pd.np.where(df.vars.str.contains('Depósitos de Instituições'), 'BANK_DEPS',
+                  #pd.np.where(df.vars.str.contains("Reservas Bancárias"), "RESERVES",
+                  pd.np.where(df.vars.str.contains('Governo Federal'), 'GOVT_DEPS',
+                  #pd.np.where(df.vars.str.contains('Notas'), 'CB_BONDS',
+                  pd.np.where(df.vars.str.contains('Recompra'), 'REPOS',
+                  pd.np.where(df.vars.str.contains('MEIO'), 'BANKNOTES',
+                  pd.np.where(df.vars.str.contains('TOTAL'), 'TOTAL',
+                  pd.np.where(df.vars.str.contains('PATRIMÔNIO'),"CAPITAL", df.vars))))))))#)))
+                  )
+    idx = t.index[t['vars'].str.contains('INTERNO')].tolist()
+    t = t.iloc[idx[0]+1:,:]
+    return(t)
+```
+
+```{python}
+bsp_2005 = clean_liab2(tables[0], '2005')
+bsp_2005 = clean_names_liab(bsp_2005)
+bsp_2005
+```
+
+From 2005 to 2008:
+```{python}
+liabilities = bsp_2005
+
+for table, year in zip(tables[1:4], yrs[0:3]):
+    step1 = clean_liab2(table, year)
+    step1 = clean_names_liab(step1)
+    liabilities = liabilities.merge(step1, on = 'vars', how = 'left')
+    
+liabilities
+```
+
+2009 is special since it has an extra column:
+```{python}
+bsp_2009 = clean_liab2(tables[4], '2009', o3 = True)
+bsp_2009 = clean_names_liab(bsp_2009)
+liabilities = liabilities.merge(bsp_2009, on = 'vars', how = 'left')
+liabilities
+```
+
+```{python}
+for table, year in zip(tables[5:8], yrs[4:7]):
+    step1 = clean_liab2(table, year)
+    step1 = clean_names_liab(step1)
+    liabilities = liabilities.merge(step1, on = 'vars', how = 'left')
+    
+liabilities
+```
+
+```{python}
+bsp_2013 = clean_liab2(tables[8], '2013', o3 = True)
+bsp_2013 = clean_names_liab(bsp_2013)
+liabilities = liabilities.merge(bsp_2013, on = 'vars', how = 'left')
+liabilities
+```
+
+```{python}
+for table, year in zip(tables[9:], yrs[8:]):
+    step1 = clean_liab2(table, year)
+    step1 = clean_names_liab(step1)
+    liabilities = liabilities.merge(step1, on = 'vars', how = 'left')
+    
+liabilities
+```
+
+```{python}
+liab2 = (liabilities.
+        apply(lambda x: x.replace('\.', '', regex = True)).
+        fillna(0).
+        melt(id_vars = ['vars'], var_name = 'date', value_name = 'value').
+        pivot(index = 'date', columns = 'vars', values = 'value').
+        apply(lambda x: pd.to_numeric(x, errors = 'coerce'))
+        )
+        
+liab2
+```
+
+## Combine assets and liabilities and normalize to Brazilian GDP
+
+Download Brazilian GDP (accumulated in 12 monhts) using `sgs` library:
+```{python}
+import sgs
+```
+
+```{python}
+gdp_br = sgs.time_serie(4382, start = '01/01/2005', end = '31/12/2018')
+```
+
+```{python}
+gdp_br = pd.DataFrame(gdp_br)
+gdp_br1 = (gdp_br.assign(month = lambda x: x.index.month).
+          query('month == 12').
+          rename(columns = {4382:'gdp'}).
+          assign(date = lambda x: x.index.year)
+          )
+          
+gdp_br1 = gdp_br1.reset_index()[['date', 'gdp']]
+
+gdp_br1.head()
+```
+
+Normalize assets as a ratio of GDP:
+```{python}
+assets3 = assets2.reset_index().assign(date = lambda x: x.date.astype('int64'))
+
+assets3 = gdp_br1.merge(assets3, how = 'left', on = 'date').iloc[:, :4]
+
+assets3.columns = ['date', 'gdp', 'a_ext', 'a_gs']
+
+assets4 = (assets3.assign(a_ext = lambda x: 100 * x.a_ext / (1000 * x.gdp))
+        .assign(a_gs = lambda x: 100 * x.a_gs / (1000 * x.gdp))
+        .drop('gdp', 1)
+        )
+
+assets4.head()
+```
+
+Normalize liabilites as a ratio of GDP:
+```{python}
+liab3 = liab2.reset_index().assign(date = lambda x: x.date.astype('int64'))
+
+liab4 = gdp_br1.merge(liab3, how = 'left', on = 'date').drop(columns = ['TOTAL'])
+liab4.columns = ['date', 'gdp', 'l_bn', 'l_bkres', 'l_cap', 'l_gd', 'l_repos']
+
+cols_to_norm = ['l_bn', 'l_bkres', 'l_cap', 'l_gd', 'l_repos']
+
+liab4[[col for col in cols_to_norm]] = 100 * liab4[cols_to_norm].div(1000 * liab4.gdp, axis = 'index')
+
+liab4 = liab4.drop(columns = ['gdp'])
+liab4
+```
+
+Consolidate BCB balance sheet:
+```{python}
+bcb_bsheet = (assets4.merge(liab4, on = 'date', how = 'left')
+             .assign(date = lambda x: x.date.astype('str')))
+             
+bcb_bsheet.head()
+```
+
+Convert to R to present:
+```{r}
+library(tidyverse)
+library(reticulate)
+```
+
+
+```{r, warning=FALSE}
+bcb_bs <- py$bcb_bsheet %>%
+  mutate_at(vars(-1), list(~ round(., digits = 1))) %>%
+  #as_tibble(rownames = 'year') %>%
+  mutate(Assets = '',
+         Liabilities = '') %>%
+  select(1, 9, 2, 3, 10, 5, 8, 7, 4, 6) %>%
+  set_names('rows/date', 'Assets', "Foreign Assets", 'Govt. Securities', 
+            'Liabilities', 'Bank reserves', 'Rev. Repos', 'Govt. Deposits',
+            'Currency in circulation', 'Equity') %>% 
+  t() %>%
+  as_tibble(rownames = '.') %>%
+  set_names(.[1,]) %>%
+  slice(-1)
+  
+```
+
+
+```{r, warning=FALSE}
+library(kableExtra)
+options("kableExtra.html.bsTable" = T)
+kable(bcb_bs, format = 'markdown') %>%
+ kable_styling(bootstrap_options = c("striped", "hover"),
+               font_size = 9,
+               full_width = F)
+
+#bcb_bs
+```
+
